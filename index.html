@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cosmic Memory Match</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <style>
+    body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #1a1a40; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script>
+let cards = [], flippedCards = [], matchedCards = [];
+let gameState = "start", score = 0, moves = 0;
+let cardSize, cols = 4, rows = 4;
+let flipTimer = 0, flipDelay = 60; // Frames (1 sec at 60 FPS)
+const symbols = ['🌟', '🪐', '🚀', '🌙', '☄️', '🛰️', '🌌', '👽'];
+
+function setup() {
+  let canvasSize = min(windowWidth * 0.9, windowHeight * 0.9);
+  createCanvas(canvasSize, canvasSize);
+  cardSize = width / cols * 0.9;
+  initGame();
+}
+
+function draw() {
+  background(20, 20, 50);
+  if (gameState === "start" || gameState === "over") {
+    showRulesPopup();
+  } else if (gameState === "playing") {
+    drawCards();
+    handleFlippedCards();
+    displayRules();
+    displayStats();
+    checkWin();
+  }
+}
+
+function initGame() {
+  cards = [];
+  matchedCards = [];
+  flippedCards = [];
+  moves = 0;
+  score = 0;
+  let tempSymbols = [...symbols, ...symbols]; // 8 pairs
+  tempSymbols = shuffle(tempSymbols);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      cards.push({
+        x: j * (cardSize + width * 0.02) + width * 0.05,
+        y: i * (cardSize + width * 0.02) + width * 0.05,
+        symbol: tempSymbols[i * cols + j],
+        flipped: false,
+        matched: false
+      });
+    }
+  }
+}
+
+function drawCards() {
+  for (let card of cards) {
+    if (card.matched) {
+      fill(100, 255, 100); // Green for matched
+    } else if (card.flipped) {
+      fill(255, 255, 100); // Yellow for flipped
+    } else {
+      fill(150, 150, 255); // Blue for unflipped
+    }
+    rect(card.x, card.y, cardSize, cardSize, 10);
+    if (card.flipped || card.matched) {
+      textSize(cardSize * 0.5);
+      textAlign(CENTER, CENTER);
+      fill(0);
+      text(card.symbol, card.x + cardSize / 2, card.y + cardSize / 2);
+    }
+  }
+}
+
+function mousePressed() {
+  if (gameState === "start" || gameState === "over") {
+    if (mouseX > width / 4 && mouseX < width * 3 / 4 && mouseY > height / 4 && mouseY < height * 3 / 4) {
+      gameState = "playing";
+      if (gameState === "over") initGame();
+    }
+  } else if (gameState === "playing" && flippedCards.length < 2 && flipTimer === 0) {
+    handleCardClick();
+  }
+}
+
+function handleCardClick() {
+  for (let card of cards) {
+    if (!card.flipped && !card.matched && 
+        mouseX > card.x && mouseX < card.x + cardSize && 
+        mouseY > card.y && mouseY < card.y + cardSize) {
+      card.flipped = true;
+      flippedCards.push(card);
+      moves++;
+      if (flippedCards.length === 2) {
+        if (flippedCards[0].symbol === flippedCards[1].symbol) {
+          flippedCards[0].matched = flippedCards[1].matched = true;
+          matchedCards.push(flippedCards[0], flippedCards[1]);
+          score += 50;
+          flippedCards = [];
+        } else {
+          flipTimer = flipDelay; // Start countdown to flip back
+        }
+      }
+      break;
+    }
+  }
+}
+
+function handleFlippedCards() {
+  if (flipTimer > 0) {
+    flipTimer--;
+    if (flipTimer === 0 && flippedCards.length === 2) {
+      flippedCards[0].flipped = flippedCards[1].flipped = false;
+      flippedCards = [];
+    }
+  }
+}
+
+function checkWin() {
+  if (matchedCards.length === cards.length) {
+    gameState = "over";
+  }
+}
+
+function displayRules() {
+  fill(255);
+  textSize(width * 0.025);
+  textAlign(LEFT, TOP);
+  text("Rules:\n- Click/Tap to flip cards\n- Match pairs of symbols\n- Fewer moves = higher score\n- Score: +50 per match", 10, 10);
+}
+
+function displayStats() {
+  fill(255);
+  textSize(width * 0.03);
+  text("Moves: " + moves, width - width * 0.2, 20);
+  text("Score: " + score, width - width * 0.2, 40);
+}
+
+function showRulesPopup() {
+  fill(50, 50, 150, 200);
+  rect(width / 4, height / 4, width / 2, height / 2);
+  fill(255);
+  textSize(width * 0.04);
+  textAlign(CENTER, CENTER);
+  let message = gameState === "start" ? 
+    "Cosmic Memory Match\n\nFlip cards to find pairs\nMatch all symbols to win\nFewer moves = better score\nClick or Tap to start" : 
+    "Game Over\n\nScore: " + score + "\nMoves: " + moves + "\nClick or Tap to restart";
+  text(message, width / 2, height / 2);
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    let j = floor(random(i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+window.addEventListener("resize", () => {
+  let canvasSize = min(windowWidth * 0.9, windowHeight * 0.9);
+  resizeCanvas(canvasSize, canvasSize);
+  cardSize = width / cols * 0.9;
+  initGame();
+});
+</script>
+</body>
+</html>
